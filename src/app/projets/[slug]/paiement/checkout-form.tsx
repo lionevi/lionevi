@@ -36,9 +36,13 @@ export function CheckoutForm({
   const router = useRouter();
   const walletSufficient = walletBalance >= amount;
 
-  const [method, setMethod] = useState<Method>(
-    stripeEnabled ? 'STRIPE' : walletSufficient ? 'WALLET' : (mobileMoneyProviders[0]?.method ?? 'STRIPE'),
-  );
+  // Ne jamais preselectionner une option indisponible : l'ordre de repli suit
+  // la disponibilite reelle (carte, puis Mobile Money, puis portefeuille).
+  const defaultMethod: Method | null = stripeEnabled
+    ? 'STRIPE'
+    : (mobileMoneyProviders[0]?.method ?? (walletSufficient ? 'WALLET' : null));
+
+  const [method, setMethod] = useState<Method | null>(defaultMethod);
   const [phone, setPhone] = useState(defaultPhone);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +54,12 @@ export function CheckoutForm({
     event.preventDefault();
     setError(null);
     setPending(null);
+
+    if (method === null) {
+      setError("Aucun moyen de paiement n'est disponible pour votre pays actuellement.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -94,17 +104,26 @@ export function CheckoutForm({
     }
   }
 
-  const options: Array<{ value: Method; label: string; hint: string; icon: typeof CreditCard; disabled?: boolean }> = [
-    ...(stripeEnabled
-      ? [
-          {
-            value: 'STRIPE' as Method,
-            label: 'Carte bancaire',
-            hint: 'Visa, Mastercard — paiement securise Stripe',
-            icon: CreditCard,
-          },
-        ]
-      : []),
+  const options: Array<{
+    value: Method;
+    label: string;
+    hint: string;
+    icon: typeof CreditCard;
+    disabled?: boolean;
+    badge?: string;
+  }> = [
+    {
+      value: 'STRIPE',
+      label: 'Carte bancaire',
+      hint: stripeEnabled
+        ? 'Visa, Mastercard — paiement securise Stripe'
+        : 'Visa, Mastercard — en cours d activation',
+      icon: CreditCard,
+      // Conserve dans la liste meme lorsque Stripe est desactive : masquer
+      // l'option laisserait croire que la carte ne sera jamais proposee.
+      disabled: !stripeEnabled,
+      badge: stripeEnabled ? undefined : 'Bientot disponible',
+    },
     ...mobileMoneyProviders.map((provider) => ({
       value: provider.method,
       label: provider.label,
@@ -127,6 +146,16 @@ export function CheckoutForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-5">
+          {method === null && (
+            <Alert variant="warning">
+              <AlertDescription>
+                Le paiement par carte est en cours d activation et aucun operateur Mobile Money
+                n est disponible pour votre pays. Approvisionnez votre portefeuille ou contactez le
+                support pour finaliser cette acquisition.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <fieldset className="space-y-2.5">
             <legend className="sr-only">Choisir un moyen de paiement</legend>
             {options.map((option) => (
@@ -149,7 +178,14 @@ export function CheckoutForm({
                 />
                 <option.icon className="h-5 w-5 text-muted-foreground" aria-hidden />
                 <span className="flex-1">
-                  <span className="block text-sm font-semibold">{option.label}</span>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold">{option.label}</span>
+                    {option.badge && (
+                      <span className="rounded-full bg-secondary/20 px-2 py-0.5 text-[11px] font-semibold text-secondary-700">
+                        {option.badge}
+                      </span>
+                    )}
+                  </span>
                   <span className="block text-xs text-muted-foreground">{option.hint}</span>
                 </span>
               </label>
@@ -185,7 +221,7 @@ export function CheckoutForm({
             </Alert>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={loading}>
+          <Button type="submit" size="lg" className="w-full" disabled={loading || method === null}>
             {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
             Payer {formatCurrency(amount, currency)}
           </Button>

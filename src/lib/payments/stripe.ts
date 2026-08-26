@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { env, isStripeConfigured, publicEnv } from '@/lib/env';
+import { env, isStripeConfigured, isStripeWebhookConfigured, publicEnv } from '@/lib/env';
 import { toStripeAmount } from '@/lib/payments/fees';
 
 let cachedStripe: Stripe | null = null;
@@ -44,7 +44,12 @@ export async function createCheckoutSession(
   input: StripeCheckoutInput,
 ): Promise<{ url: string; sessionId: string }> {
   const stripe = getStripe();
-  if (!stripe) throw new PaymentError('Le paiement par carte est indisponible.', 'NOT_CONFIGURED');
+  if (!stripe) {
+    throw new PaymentError(
+      "Le paiement par carte n'est pas encore disponible. Utilisez le Mobile Money ou votre portefeuille.",
+      'NOT_CONFIGURED',
+    );
+  }
 
   const baseUrl = publicEnv.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
 
@@ -86,8 +91,8 @@ export async function createCheckoutSession(
 /** Verifie la signature d'un webhook Stripe. */
 export function constructWebhookEvent(payload: string, signature: string): Stripe.Event {
   const stripe = getStripe();
-  if (!stripe || !env.STRIPE_WEBHOOK_SECRET) {
+  if (!stripe || !isStripeWebhookConfigured()) {
     throw new PaymentError('Webhook Stripe non configure.', 'NOT_CONFIGURED');
   }
-  return stripe.webhooks.constructEvent(payload, signature, env.STRIPE_WEBHOOK_SECRET);
+  return stripe.webhooks.constructEvent(payload, signature, env.STRIPE_WEBHOOK_SECRET as string);
 }

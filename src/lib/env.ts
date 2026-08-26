@@ -75,10 +75,44 @@ export const publicEnv: PublicEnv = publicSchema.parse({
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
 });
 
-export const isAiConfigured = (): boolean => Boolean(env.ANTHROPIC_API_KEY);
-export const isStripeConfigured = (): boolean => Boolean(env.STRIPE_SECRET_KEY);
-export const isEmailConfigured = (): boolean => Boolean(env.RESEND_API_KEY);
+/**
+ * Valeurs sentinelles signifiant « service volontairement desactive ».
+ *
+ * Une variable d'environnement definie a l'une de ces valeurs est traitee
+ * exactement comme si elle etait absente. Sans cela, poser
+ * `STRIPE_SECRET_KEY=disabled` rendrait `Boolean(...)` vrai : l'application
+ * croirait Stripe operationnel, proposerait le paiement par carte, puis
+ * echouerait a l'appel du prestataire. Le mode degrade doit rester explicite.
+ */
+const DISABLED_SENTINELS = new Set([
+  'disabled',
+  'disable',
+  'off',
+  'none',
+  'null',
+  'undefined',
+  'todo',
+  'changeme',
+  '[mettre_ici]',
+  'a_definir',
+]);
+
+/** Une variable est-elle reellement renseignee (ni vide, ni sentinelle) ? */
+export function isSet(value: string | undefined | null): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  if (normalized.length === 0) return false;
+  if (DISABLED_SENTINELS.has(normalized)) return false;
+  // Placeholders de la forme <...> ou [...] laisses par un modele de configuration.
+  if (/^[<\[].*[>\]]$/.test(normalized)) return false;
+  return true;
+}
+
+export const isAiConfigured = (): boolean => isSet(env.ANTHROPIC_API_KEY);
+export const isStripeConfigured = (): boolean => isSet(env.STRIPE_SECRET_KEY);
+export const isStripeWebhookConfigured = (): boolean => isSet(env.STRIPE_WEBHOOK_SECRET);
+export const isEmailConfigured = (): boolean => isSet(env.RESEND_API_KEY);
 export const isGoogleAuthConfigured = (): boolean =>
-  Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+  isSet(env.GOOGLE_CLIENT_ID) && isSet(env.GOOGLE_CLIENT_SECRET);
 export const isStorageConfigured = (): boolean =>
-  Boolean(publicEnv.NEXT_PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
+  isSet(publicEnv.NEXT_PUBLIC_SUPABASE_URL) && isSet(env.SUPABASE_SERVICE_ROLE_KEY);
