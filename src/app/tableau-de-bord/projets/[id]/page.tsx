@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { EVALUATION_CRITERIA, aiEvaluationSchema } from '@/lib/ai/evaluation';
-import { anteriorityCertificateNumber } from '@/lib/hash';
+import { anteriorityCertificateNumber } from '@/lib/anteriority';
 import { prisma } from '@/lib/prisma';
 import { formatCurrency, formatDate, formatDateTime, formatNumber } from '@/lib/utils';
 import { requireUser } from '@/server/session';

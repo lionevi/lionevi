@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { completeJson } from '@/lib/ai/client';
-import { normalizeText } from '@/lib/hash';
+import { normalizeText } from '@/lib/anteriority';
 import { clamp } from '@/lib/utils';
 
 export interface SimilarityCandidate {

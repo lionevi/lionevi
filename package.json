@@ -2,7 +2,7 @@
   "name": "ideamarket-africa",
   "version": "1.0.0",
   "private": true,
-  "description": "IdeaMarket Africa — marketplace de vente et d'achat d'idees et projets innovants",
+  "description": "IdeaMarket Africa \u2014 marketplace de vente et d'achat d'idees et projets innovants",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -12,11 +12,11 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx --env-file-if-exists=.env prisma/seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",

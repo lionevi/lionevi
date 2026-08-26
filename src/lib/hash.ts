@@ -1,4 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { normalizeText } from '@/lib/anteriority';
+
+export { anteriorityCertificateNumber, normalizeText, shortHash } from '@/lib/anteriority';
 
 /**
  * Champs pris en compte dans l'empreinte d'unicite d'un projet.
@@ -16,17 +19,6 @@ export interface HashableProject {
   solution_detail?: string | null;
   business_model?: string | null;
   implementation_steps?: string[] | null;
-}
-
-/** Normalise un texte : minuscules, sans accents, espaces reduits. */
-export function normalizeText(input: string): string {
-  return input
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 /**
@@ -49,21 +41,6 @@ export function computeContentHash(project: HashableProject): string {
   ].map(normalizeText);
 
   return createHash('sha256').update(parts.join('|'), 'utf8').digest('hex');
-}
-
-/**
- * Numero de certificat d'anteriorite lisible, derive du hash et de l'horodatage.
- * Format : IMA-<AAAA><MM>-<8 premiers caracteres du hash>.
- */
-export function anteriorityCertificateNumber(contentHash: string, submittedAt: Date): string {
-  const year = submittedAt.getUTCFullYear();
-  const month = `${submittedAt.getUTCMonth() + 1}`.padStart(2, '0');
-  return `IMA-${year}${month}-${contentHash.slice(0, 8).toUpperCase()}`;
-}
-
-/** Empreinte courte affichable dans l'interface. */
-export function shortHash(contentHash: string): string {
-  return `${contentHash.slice(0, 12)}...${contentHash.slice(-4)}`;
 }
 
 /** Identifiant de fichier unique pour le stockage. */

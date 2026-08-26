@@ -1,7 +1,7 @@
 'use client';
 
 import { Timer } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn, formatCountdown } from '@/lib/utils';
 
 interface CountdownProps {
@@ -17,7 +17,11 @@ export function Countdown({
   className,
   urgentBelowHours = 6,
 }: CountdownProps): React.JSX.Element {
-  const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+  // Memoise la date pour que l'effet ne se reabonne pas a chaque rendu.
+  const end = useMemo(
+    () => (typeof endDate === 'string' ? new Date(endDate) : endDate),
+    [endDate],
+  );
   const [label, setLabel] = useState(() => formatCountdown(end));
 
   useEffect(() => {

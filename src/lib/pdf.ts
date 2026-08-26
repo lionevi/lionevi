@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import { APP_NAME } from '@/lib/constants';
-import { anteriorityCertificateNumber } from '@/lib/hash';
+import { anteriorityCertificateNumber } from '@/lib/anteriority';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 const COLORS = {

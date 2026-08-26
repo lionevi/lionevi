@@ -27,7 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { anteriorityCertificateNumber, shortHash } from '@/lib/hash';
+import { anteriorityCertificateNumber, shortHash } from '@/lib/anteriority';
 import { prisma } from '@/lib/prisma';
 import { formatCurrency, formatDate, formatNumber, truncate } from '@/lib/utils';
 import { hasAtLeast, resolveProjectAccess } from '@/server/access';
