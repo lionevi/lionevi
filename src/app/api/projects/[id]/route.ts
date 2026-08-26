@@ -3,6 +3,7 @@ import { handleApiError, ok, readJson } from '@/lib/api';
 import { prisma } from '@/lib/prisma';
 import { draftProjectSchema } from '@/lib/validation';
 import { applyAccessFilter, resolveProjectAccess } from '@/server/access';
+import { getAuctionState } from '@/server/auctions';
 import { deleteProject, updateProject } from '@/server/projects';
 import { getSessionUser, notFound, requireUser } from '@/server/session';
 
@@ -18,8 +19,10 @@ export async function GET(_request: NextRequest, { params }: RouteContext): Prom
 
     const user = await getSessionUser();
     const access = await resolveProjectAccess(project, user);
+    const auction =
+      project.selling_mode === 'AUCTION' ? await getAuctionState(project) : null;
 
-    return ok({ project: applyAccessFilter(project, access), access });
+    return ok({ project: applyAccessFilter(project, access), access, auction });
   } catch (error) {
     return handleApiError(error);
   }
