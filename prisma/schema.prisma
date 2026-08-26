@@ -6,8 +6,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Connexion applicative : passe par le pooler Supabase (pgbouncer).
+  url       = env("DATABASE_URL")
+  // Connexion directe, utilisee par `prisma migrate` et `prisma db push`,
+  // qui ne fonctionnent pas a travers un pooler en mode transaction.
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
