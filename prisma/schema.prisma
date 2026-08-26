@@ -1,0 +1,339 @@
+// IdeaMarket Africa — schema de donnees
+// Marketplace de vente et d'achat d'idees et de projets innovants.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SELLER
+  BUYER
+  BOTH
+  ADMIN
+}
+
+enum ProjectStatus {
+  DRAFT
+  PENDING_REVIEW
+  SIMILARITY_CHECK
+  PUBLISHED
+  SOLD
+  ARCHIVED
+  REJECTED
+}
+
+enum SellingMode {
+  FIXED_PRICE
+  AUCTION
+}
+
+enum DisplayLevel {
+  PREMIUM
+  FEATURED
+  STANDARD
+  LOW
+}
+
+enum SimilarityStatus {
+  CLEAR // < 30%
+  MODERATE // 31-60%
+  HIGH // 61-85%
+  DUPLICATE // > 85%
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  REFUNDED
+  DISPUTED
+}
+
+enum PaymentMethod {
+  STRIPE
+  WAVE
+  ORANGE_MONEY
+  MTN_MOBILE_MONEY
+  WALLET
+}
+
+enum BidStatus {
+  ACTIVE
+  WINNING
+  LOST
+  REFUNDED
+}
+
+enum NotificationType {
+  NEW_BID
+  OUTBID
+  AUCTION_WON
+  AUCTION_LOST
+  PROJECT_SOLD
+  PROJECT_PURCHASED
+  NEW_MESSAGE
+  PROJECT_REVIEWED
+  PROJECT_PUBLISHED
+  PROJECT_REJECTED
+  PAYMENT_RECEIVED
+  WITHDRAWAL_PROCESSED
+  SIMILARITY_ALERT
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  password_hash  String?
+  name           String
+  avatar_url     String?
+  role           Role     @default(BOTH)
+  bio            String?
+  country        String   @default("BJ")
+  phone          String?
+  wallet_balance Float    @default(0)
+  email_verified Boolean  @default(false)
+  is_banned      Boolean  @default(false)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  projects          Project[]
+  bids              Bid[]
+  purchases         Transaction[]  @relation("Buyer")
+  sales             Transaction[]  @relation("Seller")
+  sent_messages     Message[]      @relation("Sender")
+  received_messages Message[]      @relation("Receiver")
+  notifications     Notification[]
+  saved_projects    SavedProject[]
+  nda_agreements    NDAgreement[]
+  reviews_given     Review[]       @relation("Reviewer")
+  reviews_received  Review[]       @relation("Reviewed")
+
+  // Comptes OAuth (NextAuth)
+  accounts Account[]
+  sessions Session[]
+}
+
+// --- NextAuth (OAuth Google) ---
+
+model Account {
+  id                  String  @id @default(cuid())
+  userId              String
+  type                String
+  provider            String
+  providerAccountId   String
+  refresh_token       String?
+  access_token        String?
+  expires_at          Int?
+  token_type          String?
+  scope               String?
+  id_token            String?
+  session_state       String?
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Project {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  // Couche 1 — Publique
+  title             String
+  tagline           String // accroche courte
+  category          String
+  sector_tags       String[]
+  problem_statement String // le probleme (public)
+  target_market     String // marche cible (general)
+  cover_image_url   String?
+
+  // Couche 2 — Semi-publique (apres NDA)
+  executive_summary     String? // resume executif (protege)
+  market_size           String? // taille marche estimee
+  competitive_advantage String? // avantage concurrentiel
+
+  // Couche 3 — Privee (apres achat)
+  full_description     String? // description complete
+  solution_detail      String? // la solution (le "comment")
+  business_model       String? // modele economique detaille
+  implementation_steps String[] // etapes de realisation
+  resources_identified String? // ressources, contacts, fournisseurs
+
+  // Medias
+  images      String[] // URLs images supplementaires
+  attachments Json[] // [{name, url, type, size, is_private}]
+  video_url   String? // YouTube/Vimeo
+
+  // Estimation financiere
+  estimated_cost_min    Float?
+  estimated_cost_max    Float?
+  implementation_months Int?
+  projected_revenue     String?
+
+  // Mode de vente
+  selling_mode          SellingMode
+  fixed_price           Float?
+  auction_start_price   Float?
+  auction_reserve_price Float? // cache aux acheteurs
+  auction_end_date      DateTime?
+  currency              String      @default("XOF")
+
+  // Statut et visibilite
+  status        ProjectStatus @default(DRAFT)
+  display_level DisplayLevel?
+
+  // Evaluation IA
+  ai_score      Float?
+  ai_evaluation Json?
+  ai_teaser     String? // teaser genere par IA (public)
+
+  // Unicite et anteriorite
+  content_hash      String? // SHA-256 du contenu complet
+  submitted_at      DateTime? // horodatage soumission (registre)
+  similarity_status SimilarityStatus?
+  similar_projects  Json? // [{project_id, score, title}]
+  similarity_note   String? // note differenciation (si similaire)
+
+  // Stats
+  views_count Int @default(0)
+  saves_count Int @default(0)
+
+  // Relations
+  seller_id      String
+  seller         User           @relation(fields: [seller_id], references: [id])
+  bids           Bid[]
+  transaction    Transaction?
+  messages       Message[]
+  saved_by       SavedProject[]
+  nda_agreements NDAgreement[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([status, display_level])
+  @@index([category])
+  @@index([seller_id])
+  @@index([content_hash])
+}
+
+model Bid {
+  id         String    @id @default(cuid())
+  project_id String
+  project    Project   @relation(fields: [project_id], references: [id])
+  bidder_id  String
+  bidder     User      @relation(fields: [bidder_id], references: [id])
+  amount     Float
+  status     BidStatus @default(ACTIVE)
+  created_at DateTime  @default(now())
+
+  @@index([project_id, amount])
+  @@index([bidder_id])
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  project_id      String            @unique
+  project         Project           @relation(fields: [project_id], references: [id])
+  buyer_id        String
+  buyer           User              @relation("Buyer", fields: [buyer_id], references: [id])
+  seller_id       String
+  seller          User              @relation("Seller", fields: [seller_id], references: [id])
+  amount          Float
+  platform_fee    Float
+  seller_earnings Float
+  payment_method  PaymentMethod
+  status          TransactionStatus @default(PENDING)
+  contract_url    String? // PDF contrat de cession genere
+  stripe_id       String?
+  created_at      DateTime          @default(now())
+  review          Review?
+
+  @@index([buyer_id])
+  @@index([seller_id])
+}
+
+model NDAgreement {
+  id         String   @id @default(cuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  project_id String
+  project    Project  @relation(fields: [project_id], references: [id])
+  ip_address String
+  user_agent String
+  signed_at  DateTime @default(now())
+
+  @@unique([user_id, project_id])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  sender_id   String
+  sender      User     @relation("Sender", fields: [sender_id], references: [id])
+  receiver_id String
+  receiver    User     @relation("Receiver", fields: [receiver_id], references: [id])
+  project_id  String?
+  project     Project? @relation(fields: [project_id], references: [id])
+  content     String
+  is_blocked  Boolean  @default(false) // bloque par le filtre IA
+  is_read     Boolean  @default(false)
+  created_at  DateTime @default(now())
+
+  @@index([sender_id, receiver_id])
+  @@index([receiver_id, is_read])
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  user_id    String
+  user       User             @relation(fields: [user_id], references: [id])
+  type       NotificationType
+  title      String
+  body       String
+  link       String?
+  is_read    Boolean          @default(false)
+  created_at DateTime         @default(now())
+
+  @@index([user_id, is_read])
+}
+
+model SavedProject {
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  project_id String
+  project    Project  @relation(fields: [project_id], references: [id])
+  created_at DateTime @default(now())
+
+  @@id([user_id, project_id])
+}
+
+model Review {
+  id             String      @id @default(cuid())
+  reviewer_id    String
+  reviewer       User        @relation("Reviewer", fields: [reviewer_id], references: [id])
+  reviewed_id    String
+  reviewed       User        @relation("Reviewed", fields: [reviewed_id], references: [id])
+  transaction_id String      @unique
+  transaction    Transaction @relation(fields: [transaction_id], references: [id])
+  rating         Int
+  comment        String?
+  created_at     DateTime    @default(now())
+}
