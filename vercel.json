@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "regions": ["cdg1"],
+  "crons": [
+    {
+      "path": "/api/cron/close-auctions",
+      "schedule": "*/10 * * * *"
+    }
+  ]
+}

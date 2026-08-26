@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
+  }
+
+  /* Cible tactile confortable sur mobile (approche mobile-first). */
+  @media (max-width: 640px) {
+    button,
+    a[role='button'] {
+      min-height: 44px;
+    }
+  }
+}
+
+@layer components {
+  .card-media {
+    @apply relative overflow-hidden bg-card-gradient;
+  }
+
+  /* Degrade appose sur les visuels de carte, pour la lisibilite du texte. */
+  .card-media::after {
+    content: '';
+    @apply pointer-events-none absolute inset-0 bg-image-fade;
+  }
+
+  .section {
+    @apply py-12 sm:py-16;
+  }
+
+  .prose-fr p {
+    @apply mb-4 leading-relaxed text-foreground/85;
+  }
+
+  .prose-fr p:last-child {
+    @apply mb-0;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
