@@ -7,6 +7,3 @@
 node_modules
 .next
 prisma/migrations/**/*.sql.bak
-
-# Plugin Adobe Illustrator : hors du perimetre de deploiement Next.js.
-logo-forge
