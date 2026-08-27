@@ -1,0 +1,55 @@
+name: Logo Forge CI
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'logo-forge/**'
+      - '.github/workflows/logo-forge-ci.yml'
+  pull_request:
+    paths:
+      - 'logo-forge/**'
+      - '.github/workflows/logo-forge-ci.yml'
+
+defaults:
+  run:
+    working-directory: logo-forge
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: logo-forge/package-lock.json
+
+      - name: Installer les dependances
+        run: npm ci
+
+      - name: Verifier le formatage
+        run: npm run format:check
+
+      - name: Analyser le code
+        run: npm run lint
+
+      - name: Verifier les types
+        run: npm run typecheck
+
+      - name: Executer les tests
+        run: npm run test
+
+      - name: Construire le plugin
+        run: npm run build
+
+      - name: Empaqueter l archive UXP
+        run: node scripts/package-ccx.mjs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: logo-forge-ccx
+          path: logo-forge/*.ccx
+          if-no-files-found: error

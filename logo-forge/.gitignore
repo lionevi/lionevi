@@ -1,0 +1,8 @@
+node_modules/
+dist/
+build/
+coverage/
+*.ccx
+*.local
+.DS_Store
+.vite/
