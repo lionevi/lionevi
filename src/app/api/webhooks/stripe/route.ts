@@ -1,6 +1,7 @@
 import type Stripe from 'stripe';
 import type { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isStripeConfigured, isStripeWebhookConfigured } from '@/lib/env';
 import { constructWebhookEvent } from '@/lib/payments/stripe';
 import { completeTransaction } from '@/server/transactions';
 
@@ -13,6 +14,12 @@ export const runtime = 'nodejs';
  * il ne doit surtout pas etre parse en JSON avant la verification.
  */
 export async function POST(request: NextRequest): Promise<Response> {
+  // Stripe volontairement desactive : on repond proprement plutot que de
+  // laisser croire a une signature invalide.
+  if (!isStripeConfigured() || !isStripeWebhookConfigured()) {
+    return new Response('Paiement par carte desactive sur cette instance.', { status: 503 });
+  }
+
   const signature = request.headers.get('stripe-signature');
   if (!signature) {
     return new Response('Signature Stripe manquante.', { status: 400 });

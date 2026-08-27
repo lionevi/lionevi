@@ -1,0 +1,9 @@
+# Fichiers d'environnement locaux : les variables de production sont gerees
+# dans Vercel (Project Settings > Environment Variables), jamais televersees.
+.env
+.env.*
+!.env.example
+
+node_modules
+.next
+prisma/migrations/**/*.sql.bak
